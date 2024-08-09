@@ -1,0 +1,171 @@
+@font-face {
+  font-family: 'fugaz';
+  src: url('assets/fonts/fugaz.ttf') format('truetype');
+}
+
+/* le sigh, i don't know how to do css */
+
+html, body {
+  margin: 0px; /* margin is outside element, padding inside */
+  padding: 0px;
+/*   disable scrolling, only issue is refresh... https://discourse.processing.org/t/disable-scrolling-on-mobile/20719/2 */
+  /* user-select: none; */
+  /* touch-action: none; */
+  /* -webkit-user-select: none; */
+/*   height: 100%;  
+  overflow: hidden; */
+}
+
+canvas {
+  display: block;
+  /* position: relative; */
+} 
+
+/* https://dev.to/ashwamegh/how-to-hide-scrollbar-from-any-html-element-dae */
+/* https://www.w3schools.com/css/css_pseudo_elements.asp */
+.scroll-hide::-webkit-scrollbar { 
+  width: 0 !important;
+  display: none; 
+}
+
+.text {
+  width: 75%;
+  margin: 5%;
+  font-size: 200%;
+  font-family: "fugaz";
+  text-align: center;
+  /* background-color: #6c702d; */
+  color: white;
+  /* Set the input to allow wrapping, thanks chat GPT*/
+  white-space: normal;
+  word-wrap: break-word; /* For older browsers */
+  overflow-wrap: break-word; /* For newer browsers */
+}
+
+.inputs {
+  /* display: flex; */
+  /* margin: auto; */
+  /* width: 75%; */
+  font-size: 200%;
+  font-family: "fugaz";
+  text-align: center;
+  /* background-color: #6c702d; */
+  background-color: #f1cb3c;
+  color: rgb(0, 0, 0);
+  /* Set the input to allow wrapping, thanks chat GPT*/
+  white-space: normal;
+  word-wrap: break-word; /* For older browsers */
+  overflow-wrap: break-word; /* For newer browsers */
+}
+
+.buttons {
+  /* margin: 10px; */
+  /* margin: 5%; */
+  /* width: 25%; */
+  /* height: 25%; */
+  background-color: rgb(108,112,45);
+  color: white;
+  font-size: 200%;
+  font-family: "fugaz";
+  text-align: center;
+  border-radius: 12px;
+  transition-duration: 0.4s;
+  box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+}
+
+.buttons:hover {
+  background-color: white;
+  color: rgb(108,112,45);
+}
+
+.tabs {
+  /* margin: 10px; */
+  /* margin: 5%; */
+  /* width: 25%; */
+  /* height: 25%; */
+  background-color: rgb(108,112,45);
+  color: white;
+  font-size: 200%;
+  font-family: "fugaz";
+  text-align: center;
+  border-radius: 24px 0px 0px 0px;
+  border-style: none;
+  transition-duration: 0.4s;
+  /* box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19); */
+}
+
+.orders {
+  /* https://howtocenterincss.com */
+  /* margin: 5%; */
+  /* margin-top: 5%; */
+  /* display: flex; */
+  justify-content: center;
+  align-items: center;
+  /* margin: auto; */
+  font-size: 150%;
+  font-family: "fugaz";
+  /* text-align: center; */
+  background-color: #6c702d;
+  color: white;
+}
+
+.labels {
+  /* https://howtocenterincss.com */
+  /* margin: 5%; */
+  /* margin:auto; */
+  margin-top: 1%;
+  /* display: flex; */
+  justify-content: center;
+  align-items: center;
+  /* margin: auto; */
+  font-size: 150%;
+  font-family: "fugaz";
+  text-align: center;
+  /* padding: 2% 0; */
+  /* background-color: #6c702d; */
+  color: black;
+}
+
+.bosslabels {
+  /* https://howtocenterincss.com */
+  /* margin: 5%; */
+  /* margin:auto; */
+  margin-top: 1%;
+  /* display: flex; */
+  justify-content: center;
+  align-items: center;
+  /* margin: auto; */
+  font-size: 200%;
+  font-family: "fugaz";
+  text-align: center;
+  /* padding: 2% 0; */
+  /* background-color: #6c702d; */
+  color: black;
+}
+
+.dropdowns {
+  justify-content: center;
+  align-items: center;
+  /* margin: auto; */
+  font-size: 200%;
+  font-family: "fugaz";
+  /* text-align: center; */
+  background-color: #f1cb3c;
+  color: black;
+}
+
+.uiDiv {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  /* display: inline-flex; */
+  width: 100%;
+  padding: 10px;
+  /* margin: 5%; */
+
+  position: absolute;
+  /* top: 50%; */
+  /* left: 25%; */
+  /* transform: translate(-50%, -25%); */
+}

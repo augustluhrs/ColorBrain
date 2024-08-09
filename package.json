@@ -1,0 +1,20 @@
+{
+  "name": "p5SocketTemplate",
+  "version": "1.0.0",
+  "main": "server.js",
+  "repository": "git@github.com:augustluhrs/p5SocketTemplate.git",
+  "author": "augustluhrs <augustluhrs@gmail.com>",
+  "license": "CC-BY-NC-4.0",
+  "private": false,
+  "engines": {
+    "node": ">=16"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@socket.io/admin-ui": "^0.5.1",
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}

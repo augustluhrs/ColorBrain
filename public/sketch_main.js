@@ -21,61 +21,49 @@ socket.on('connect', () => {
     }
 });
 
-//receiving info to complete setup
-socket.on('clientInit', (data) => {
-  // console.log('received init data:');
-  // console.log(data);
-  // players = data.players;
-  // game = data.game;
-  // state = data.state;
-  // originalFactions = game.factions; //sets current server faction info, so can change on own without overwrite
-  // adjustedFactions = structuredClone(game.factions); //fookkin references mate
-  
-  // for (let faction of Object.keys(adjustedFactions)){
-  //   influenceTally[faction] = {
-  //     newOrders: {},
-  //     newShares: 0,
-  //   };
-  //   for (let action of Object.keys(adjustedFactions[faction].orders)){
-  //     influenceTally[faction].newOrders[action] = 0;
-  //   }
-  // }
-
-  // hasReceivedInit = true;
-  //trying to fix UI bug, need both socket info and setup to have finished
-  // hasEitherFinished ? initUI() : hasEitherFinished = true;
-});
-
-socket.on('updates', (data)=>{
-  players = data.players;
-  // game = data.game;
-  state = data.state;
-
-  //seems... weird...
-  // timerMin = state.timerMin;
-  // timerSec = state.timerSec;
-
-  // if (hasPlayerProfile) {phase = state.phase}; //login issue if phase changes
-
-  //personal updates: TODO
-
+socket.on('colorToClient', (data)=>{
+  signal = data;
+  phase = "color";
+  hasStarted = true;
 });
 
 // MARK: GAME STATE VARIABLES
 
-let players, state;
-// let phase = "login"; //hmm now has state phase... TODO redundant
-
+// let players, state;
+// let seats, state; //need either? prob not
+// let phase = "login";
+let hasPickedSeat = false; //intro screen seat selection
+let hasDisconnected = false; //not sure if this will ever happen, but server sends message if hasn't responded, can tap to reconnect
+let hasStarted = false; //just for reminder text
+// let hasReceivedColor = false; //hmm.... feels redundant
+// let hasSentColor = true; //gate for allowing color message back to server on screen tap
+let phase = "floorplan"; // floorplan --> waiting --> color --> [inactive]
+let signal = { //color message from server
+  chain: 0,
+  index: 0,
+  color: {
+    r: 0,
+    g: 0,
+    b: 0
+  }
+}
+let seatPos = {
+  x: 0,
+  y: 0
+}
+let seatHue = 180;
 
 // MARK: UI VARIABLES
 
 let font, textSize_L, textSize_M, textSize_S;
+let floorplan;
 let canvas;
 let wCell, hCell; //hmm. just for grid spacing...
 let headY, bodyY, footY; //y height of sections
 
 function preload(){
   font = loadFont('assets/fonts/fugaz.ttf');
+  floorplan = loadImage('assets/imgs/studioG.jpg');
 }
 
 function setup(){
@@ -90,6 +78,11 @@ function setup(){
   headY = hCell * 4;
   bodyY = hCell * 19;
   footY = hCell * 6;
+
+  textSize_L = width/12;
+  textSize_M = width/24;
+  textSize_S = width/36;
+
 
   //layout
   ellipseMode(CENTER);
@@ -111,9 +104,59 @@ function setup(){
 //
 
 function draw(){
-  background(82,135,39);
-  // background(0);
+  // background(82,135,39);
+  background(0);
 
+  switch (phase){
+    case "floorplan": //seat selection graphic
+      push();
+      translate(width/2, height/2);
+      rotate(PI/2);
+      image(floorplan, 0, 0, height, width);
+      textSize(textSize_M);
+      text('SCREEN', 0, -2*width/5);
+      text('DOOR', (hCell * 27) - height/2, -(wCell * 2) + width/2);
+      if(hasPickedSeat){
+        seatHue+=5;
+        fill(180, seatHue % 255, 180);
+        ellipse(seatPos.rX, seatPos.rY, wCell);
+        fill(100, 255, 0);
+        rect(0, -width/5, hCell * 14, wCell * 3);
+        fill(0);
+        text('Click here to confirm your location, \nor retap to move the circle', 0, -width/5, hCell * 14, wCell * 3);
+      } else {
+        text('please tap where you currently are in the room', 0, 0);
+        noFill();
+        rect(0, -width/5, hCell * 3, wCell * 2);
+        fill(0);
+        text('August', 0, -width/5);
+      }
+      pop();
+
+      break;
+    case "waiting": //black screen
+      push();
+      textSize(textSize_M);
+      fill(255);
+      if (hasStarted){
+        text('waiting', width/2, height/2);
+      } else {
+        text('waiting \n\n remember to turn your brightness up plz', width/2, height/2);
+      }
+      pop();
+      break;
+    case "color": //live signal
+      push();
+      background(signal.color.r, signal.color.g, signal.color.b);
+      pop();
+      break;
+    case "demo": //tutorial screen
+
+      break;
+  }
+
+  //debug design grid
+  // showGrid();
 }
 
 //
@@ -126,11 +169,47 @@ function draw(){
 //
 
 function mousePressed(){
-  if (mouseX < wCell * 3 && mouseY < hCell * 3 
-    && timerSecretShowing){
-      alert("long live the queen");
-      //TODO go to /bees
+  console.log(mouseX / width, mouseY / height);
+  if (phase == "floorplan"){
+    if ((mouseX / width) > 0.55 && ((mouseY / height) > 0.25 && (mouseY/height) < 0.75)){
+      if (hasPickedSeat) {
+        //'clicking' confirm button, send to server
+        socket.emit('assignSeat', seatPos);
+        console.log('sent seat location to server');
+        phase = "waiting";
+        //server sets phase after creating player? whats better?
+      }
+    } else {
+      hasPickedSeat = true;
+      seatPos.x = mouseX / width;
+      seatPos.y = mouseY / height;
+      seatPos.rX = ((seatPos.y * 30) * hCell) - height/2;
+      seatPos.rY =  -((seatPos.x * 14) * wCell) + width/2;
+      // seatPos.x = ((mouseX / width) * height) - height/2;
+      // seatPos.y = ((mouseY / height) * width) - width/2;
     }
+    return;
+  }
+
+  if (phase == "color"){
+    socket.emit('colorToServer', signal);
+    phase = 'waiting';
+  }
+
+  if (phase == "inactive"){
+
+  }
+}
+
+function showGrid(){
+  for (let row = 0; row <= 30; row ++){
+    text(row, wCell / 2, row * hCell);
+    line(0, row * hCell, width, row * hCell);
+  }
+  for (let col = 0; col <= 14; col ++){
+    text(col, col * wCell, hCell / 2);
+    line(col * wCell, 0, col * wCell, height);
+  }
 }
 
 function hexToRGB(hex){
@@ -150,3 +229,5 @@ function randomHex(){ // thanks https://css-tricks.com/snippets/javascript/rando
   return "#" + randomColor;
 
 }
+
+

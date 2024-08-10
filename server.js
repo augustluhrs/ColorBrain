@@ -18,78 +18,6 @@ const { instrument, RedisStore } = require("@socket.io/admin-ui");
 //where we look for files
 app.use(express.static('public'));
 
-// MARK: DB
-// nedb database stuff
-// const Datastore = require('nedb');
-// let backupDB = new Datastore({filename: "saves/backup.db", autoload: true});
-// let lastSave = {
-//   game: {},
-//   state: {},
-//   players: [],
-//   log: [],
-//   timestamp: 0,
-// };
-
-// function backupInit(){
-//   console.log('backup init');
-//   backupDB.find({type: "backup"}, (err, docs) => {
-//       if (err) {console.log("backup db setup err: " + err)};
-//       if (docs.length != 0) { //exists
-//         console.log('loading last save');
-//         lastSave = {
-//           game: docs[0].game, 
-//           state: docs[0].state, 
-//           players: docs[0].players, 
-//           log: docs[0].log,
-//           timestamp: docs[0].timestamp
-//         };
-//         //TODO load (could be a boss command)
-//       } else { 
-//         //for first, make blank entry
-//         console.log('new db, creating first doc');
-//         backupDB.insert({
-//           type: "backup",
-//           game: game,
-//           state: state,
-//           players: players,
-//           log: log,
-//           timestamp: Date.now(),
-//         }, (err, newDoc) =>{
-//           if (err) {console.log('new backup err: ' + err)}
-//           console.log("new backup doc");
-//           console.log(newDoc);
-//         })  
-//       }
-//   });
-// }
-
-// backupInit();
-
-// function backup(){
-//   backupDB.update({type: "mainBackup"}, {type: "mainBackup", game: game, state: state, players: players, log: log, time: Date.now()}, {upsert: true}, (err) => {
-//     if (err) {console.log("main backup err: " + err);
-//     }
-//     console.log('saved state, db backed up successfully');  
-//   });
-//   backupDB.insert([{type: "backup", game: game, state: state, players: players, log: log, time: Date.now()}], (err) => {
-//     if (err) {console.log("backup err: " + err);
-//     } 
-//   });
-// }
-
-//stores events or something idk, is for db
-let log = [];
-
-// function logTimeAndReset(){
-//   //just for our info later
-//   let duration = (Date.now() - state.lastTime) / 1000;
-//   console.log(`\n\n\n${state.phase} took ${duration} seconds, logging.\n\n\n`);
-//   log.push[state.phase, duration]; //not working for some reason...
-
-//   //reset timer
-//   state.lastTime = Date.now();
-// }
-
 // MARK: Socket Server
 const { Server } = require('socket.io');
 const io = new Server(httpServer, {
@@ -117,32 +45,13 @@ httpServer.listen(port, function(){
   console.log('Server is listening at port: ', port);
 });
 
-// MARK: Player Variables
-// players contains the player accounts and associated socket.ids / names
-// started using ids as keys, but then on reconnect, need to move all info and delete
-// instead, will keep generic number as key, then update id and name within (boss will assign to number)
-let players = []; //{}; 
-
-// class Player {
-//   constructor(args){
-//     // this.playerNum = args.playerNum || undefined; //hmm
-//     this.name = args.name || "player"; //player's inputted name
-//     this.id = args.id || "0x69420"; //socket id -- won't actually use this probs
-//     this.engineCookie = args.engineCookie || ""; // this is the reconnect id
-//     this.isAssigned = args.isAssigned || false; //on reconnect, only shows accounts that aren't claimed
-//     this.color = args.color || {r: 0, g: 0, b:0}; //normalized
-//     this.colorString = args.colorString || "#a42069";
-//     this.chips4Orders = args.chips4Orders || 0;
-//     this.chips4Shares = args.chips4Orders || 0;
-//     // this.chipCount = 0;
-//     // this.specialChips = {};
-//     // this.pollenHeld = 0; //unscored pollen
-//     // this.pollenCount = 0; //scored pollen
-//     this.nectar = args.nectar || 0;
-//     this.messages = args.messages || ["Welcome to the HoneyPot"];
-//     this.secrets = args.secrets || [];
-//   }
-// }
+// MARK:  Variables
+let seats = {};
+// let colorQueue = [];
+let chains = [[]];
+let chainIndex = 0; 
+//hmm why not above in state? whatevs
+let hasStarted = false;
 
 // MARK: Game State Variables
 let state = { //the "game state" for everything, not just godot game
@@ -151,7 +60,14 @@ let state = { //the "game state" for everything, not just godot game
   lastTime: Date.now(),
 }; 
 
+//color queue placeholder
 
+let colorQueue = [
+  {r: 255, g: 0,   b: 0},
+  {r: 0,   g: 255, b: 0},
+  {r: 0,   g: 0,   b: 255},
+  {r: 255, g: 255, b: 255},
+]
 //
 //  MARK: Player
 //  client (mobile)
@@ -165,114 +81,65 @@ main.on('connection', (socket) => {
   //ah, that's more for like, bug disconnects, not refreshes... but still good to have i guess
   (socket.recovered) ? console.log('recovered client! ' + socket.id):console.log('new player client!: ' + socket.id);
 
-  // socket.emit('clientInit', { //hmm could just be update...
-  //   game: game,
-  //   state: state,
-  //   players: players
-  // });
+  //seat selection msg from client
+  socket.on('assignSeat', (data)=>{
+    for (let seat of Object.keys(seats)){
+      //check for existing seat with this id
+      if (seat == socket.id){
+        seat.pos.x = data.x; //normalized
+        seat.pos.y = data.y;
+        console.log(`updated seat, ${socket.id} at ${data.x}, ${data.y}`);
+        console.log(`numSeats: ${Object.keys(seats).length}`);
+        console.log('adjusting seat map');
+        chains = sortSeatMap();
+        return;
+      } 
+    }
 
-  //check player object and update if existing:
-  //hmm, there's prob a smarter/built in way to do this, but this is what testing led me to:
-  // checkPlayerConnect(socket); //will lead to 'cookieReconnect' if existing, or waiting if new
-  
-  //event sent as response to 'cookieReconnect'
-  // socket.on('updateCookie', (data)=>{ //cookie :3
-  //   // on connect, player sends `socket.io.engine.id` so that we can check it against cookie on reconnect
-  //   // if existing player, update engineCookie
-  //   console.log(data.engineCookie);
-  //   for (let player of players) { //hmm should maybe go back to object, this is a little silly
-  //     if (player.id == socket.id) { 
-  //       console.log("updating " + player.name);
-  //       player.engineCookie = data.engineCookie;
-  //       // socket.emit('clientInit', { //hmm could just be update...
-  //       //   game: game,
-  //       //   state: state,
-  //       //   players: players
-  //       // });
-  //       return;
-  //     }
-  //   }
-  // });
+    //if gets here, no corresponding seat
+    seats[socket.id] = {
+      chain: null,
+      index: null,
+      pos: {x: data.x, y: data.y},
+    };
+    console.log(`new seat from ${socket.id} at ${data.x}, ${data.y}`);
+    console.log(`numSeats: ${Object.keys(seats).length}`);
+    console.log('adjusting seat map');
+    chains = sortSeatMap();
 
-  // socket.on('relogin', (data)=>{
-  //   for (let player of players){
-  //     if (player.name == data.name){
-  //       socket.emit('loggedIn', player);
-  //       console.log(`${player.name} has returned`);
-  //       player.isAssigned = true;
-  //       player.id = socket.id;
-  //     }
-  //   }
-  // });
+    //demo remove later TODO
+    hasStarted = true;
 
-  //event from new player's login phase screen
-  // socket.on('newPlayer', (data)=>{
-  //   //create new profile
-  //   players.push(new Player(data));
-  //   for (let faction of Object.keys(game.factions)){
-  //     game.factions[faction].shares[data.name] = 0;
-  //   }
-  //   socket.emit('playerProfileCreated'); //just to toggle flag
-  //   boss.emit('newPlayer', players);
-    
-  //   console.log('player profile received: ' + data.name);
-  // });
-
-
-  //listen for this client to disconnect
-  socket.on('disconnect', () => {
-    // console.log('input client disconnected: ' + socket.id);
-    // for (let player of players){
-    //   if (player.id == socket.id){
-    //     console.log(player.name + " has disconnected\n");
-    //     player.isAssigned = false;
-    //     return;
-    //   }
-    // }
-    console.log('anon player client disconnected: ' + socket.id + "\n");
-    // players[socket.id] != undefined ? console.log(players[socket.id].name + ' disconnected') : console.log('unassigned client disconnected: ' + socket.id);
+    //client switches to waiting itself, so no need to send confirm event
   });
 
-});
-
-//
-// MARK: LOGIN
-//
-var login = io.of('/login');
-//listen for anyone connecting to default namespace
-login.on('connection', (socket) => {
-  console.log('login client: ' + socket.id);
-
-  // socket.emit('clientInit', { //hmm could just be update...
-  //   game: game,
-  //   state: state,
-  //   players: players
-  // });
-
-  //event from new player's login phase screen
-  // socket.on('newPlayer', (data)=>{
-    //create new profile
-    // players.push(new Player(data));
-    // for (let faction of Object.keys(game.factions)){
-    //   game.factions[faction].shares[data.name] = 0;
-    // }
-    // socket.emit('playerProfileCreated'); //just to toggle flag
-    // boss.emit('newPlayer', players);
+  //color signal from chain, pass along or send to nano
+  socket.on('colorToServer', (data)=>{
+    //gets chain, index of seat in chain, and color
     
-    // console.log('player profile received: ' + data.name);
-    // backup();
-  // });
+    if (data.index < chains[data.chain].length - 1){
+      //send to next phone
+      data.index++;
+      main.to(chains[data.chain][data.index].id).emit('colorToClient', data);
+      console.log(`sent continued signal at chain ${data.chain} --> ${data.index}: ${JSON.stringify(data.color)}`);
+    } else{
+      //send to nano
+      console.log('\n\nNANO\n\n');
+    }
+  });
 
   //listen for this client to disconnect
   socket.on('disconnect', () => {
-    // console.log('input client disconnected: ' + socket.id);
-    // for (let player of players){
-    //   if (player.id == socket.id){
-    //     console.log(player.name + " has disconnected\n");
-    //     return;
-    //   }
-    // }
-    console.log('anon player client disconnected: ' + socket.id + "\n");
+    console.log('player client disconnected: ' + socket.id + "\n");
+    for (let seat of Object.keys(seats)){
+      if (seat == socket.id){
+        // console.log(seats);
+        delete seats[seat];
+        chains = sortSeatMap();
+        return;
+      }
+    }
+    console.log('error deleting ' + socket.id);
     // players[socket.id] != undefined ? console.log(players[socket.id].name + ' disconnected') : console.log('unassigned client disconnected: ' + socket.id);
   });
 
@@ -321,43 +188,86 @@ brain.on('connection', (socket) => {
 //
 
 setInterval( () => {
-  //do we need any looped updates?
-  //yes, for timer?
   // state.timer = Date.now() - state.lastTime; //still in ms, clients can parse -- issue with interval being 100?
-  // let update = {
-  //   game: game,
-  //   state: state,
-  //   players: players
-  // };
 
-  // io.emit('updates', update);
-  // //no idea why this doesn't work... io is only default namespace?
-  // boss.emit('updates', update);
-  // godot.emit('updates', update);
-  // lotto.emit('updates', update);
-  //keeper
-}, 100); //too much?
+  //demo color start
+  if (hasStarted){
+    startColorSignal();
+  }
+
+}, 3000); //long for now, just to demo chains
 
 //
 // MARK: FUNCTIONS
 //
 
-// function checkPlayerConnect(s){
-//   for (let player of players) {
-//     console.log('checking');
-//     console.log(s.handshake.headers.cookie.slice(3));
-//     console.log(player.engineCookie);
-//     if (s.handshake.headers.cookie.slice(3) == player.engineCookie) {
-//       //existing player, so update profile's cookie and send back player info
-//       console.log(player.name + " reconnected!");
+function startColorSignal(){
+  // sends event to first in chain, on interval, from color queue
+  // TODO should have color queue just be object with num signals? and decrement on successful to nano?
+  // use current chainIndex to know which chain to use, then increment after
+  // console.log(chains);
+  if (chains[0].length <= 0){return;}
 
-//       //hmm, updating id for check later
-//       player.id = s.id;
+  let startID = chains[chainIndex][0].id;
+  let signal = {
+    chain: chainIndex,
+    index: 0,
+    color: {
+      r: colorQueue[0].r,
+      g: colorQueue[0].g,
+      b: colorQueue[0].b,
+    }
+  }
+  main.to(startID).emit('colorToClient', signal);
+  console.log(`started new signal at chain ${chainIndex} with ${startID}: ${JSON.stringify(signal.color)}`)
+  colorQueue.push(colorQueue.splice(0, 1)[0]); //for now, just cycle the colors;
+  console.log(colorQueue);
 
-//       s.emit('cookieReconnect', player); //sends the cookie back in other event
-//       return;
-//     }
-//   }
 
-//   console.log("new player, waiting for profile info");
-// }
+  chainIndex = (chainIndex + 1) % chains.length;
+}
+
+function sortSeatMap(){
+  //with every seat connect/disconnect/inactive/active, redo the chains
+  //aiming for 4 chains, evenly sorting by vertical slice of audience (back to front)
+  
+  // current method --> sort into four slices by yPos
+  // then sort by xPos, with least as start, most as end
+  let numSeats = Object.keys(seats).length;
+  //low participant mode, all in same chain  
+  if (numSeats < 8){
+    // let numChains = Math.floor(numSeats / 2);
+    let newChains = [];
+    //just sort the seats by xPos and put all in chain 0
+    let oneChain = [];
+    for (let seat of Object.keys(seats)){
+      oneChain.push({id: seat, pos: seats[seat].pos});
+    }
+    console.log(oneChain);
+    oneChain = oneChain.sort((a,b)=> a.pos.x - b.pos.x);
+    console.log(oneChain);
+    newChains.push(oneChain);
+    return newChains;
+  }
+
+  //quorum mode: (at least 8, for start/end of each chain)
+  let minSeats = Math.floor(numSeats / 4);
+  let newChains = [[],[],[],[]];
+  //just sort the seats by yPos and put all in chain 0
+  let oneChain = [];
+  for (let seat of Object.keys(seats)){
+    oneChain.push({id: seat, pos: seats[seat].pos});
+  }
+  console.log(oneChain);
+  oneChain = oneChain.sort((a,b)=> a.pos.y - b.pos.y);
+  console.log(oneChain);
+  
+  //split by minimum
+  newChains[0] = oneChain.splice(0, minSeats);
+  newChains[3] = oneChain.splice(-minSeats, minSeats);
+  newChains[1] = oneChain.splice(0, oneChain.length / 2);
+  newChains[2] = oneChain; //ref err? check TODO
+
+  console.log(newChains);
+  return newChains;
+}

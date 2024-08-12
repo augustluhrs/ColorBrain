@@ -125,6 +125,8 @@ main.on('connection', (socket) => {
     } else{
       //send to nano
       console.log('\n\nNANO\n\n');
+      main.to(chains[data.chain][data.index].id).emit('sendMQTT', data);
+
     }
   });
 

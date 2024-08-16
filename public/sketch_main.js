@@ -64,6 +64,7 @@ let phase = "floorplan"; // floorplan --> waiting --> color --> [inactive]
 let signal = { //color message from server
   chain: 0,
   index: 0,
+  hueIndex: 0,
   color: {
     r: 0,
     g: 0,

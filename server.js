@@ -52,23 +52,60 @@ let chains = [[]];
 let chainIndex = 0; 
 //hmm why not above in state? whatevs
 let hasStarted = false;
+let isSendingSignals = false;
 
 // MARK: Game State Variables
 let state = { //the "game state" for everything, not just godot game
   phase: "prelude", //the label that's displayed, dictates what part of round we're in
   timer: 0, 
   lastTime: Date.now(),
+  startTime: 0, //to track how long we've been running, so we can adjust interval
+  signalInterval: 3000, //will get overwritten in startColorQueue(), adjusts dynamically TODO 
 }; 
 
 //color queue placeholder
-
-let colorQueue = [
-  {r: 255, g: 0,   b: 0},
-  {r: 0,   g: 255, b: 0},
-  {r: 0,   g: 0,   b: 255},
-  {r: 255, g: 255, b: 255},
+// let colorQueue = [
+//   {r: 255, g: 0,   b: 0},
+//   {r: 0,   g: 255, b: 0},
+//   {r: 0,   g: 0,   b: 255},
+//   {r: 255, g: 255, b: 255},
+// ];
+let colorHues = [
+  {hueIndex: 0,  r: 255, g: 0,     b: 0},
+  {hueIndex: 1,  r: 255, g: 128,   b: 0},
+  {hueIndex: 2,  r: 255, g: 255,   b: 0},
+  {hueIndex: 3,  r: 128, g: 255,   b: 0},
+  {hueIndex: 4,  r: 0,   g: 255,   b: 0},
+  {hueIndex: 5,  r: 0,   g: 255,   b: 128},
+  {hueIndex: 6,  r: 0,   g: 255,   b: 255},
+  {hueIndex: 7,  r: 0,   g: 128,   b: 255},
+  {hueIndex: 8,  r: 0,   g: 0,     b: 255},
+  {hueIndex: 9,  r: 128, g: 0,     b: 255},
+  {hueIndex: 10, r: 255, g: 0,     b: 255},
+  {hueIndex: 11, r: 255, g: 0,     b: 128},
+  {hueIndex: 12, r: 255, g: 255,   b: 255},
 ];
+let colorQueue = [];
+let maxSignalCount = 3;
+createColorQueue(maxSignalCount);
 
+//
+//  MARK: TD
+//  client (no page, just connection to SocketIODAT)
+//
+
+let td = io.of('/td');
+
+td.on('connection', (socket) => {
+  console.log('td client connected: ' + socket.id);
+
+  socket.emit('connected to glitch!');
+
+  socket.on('disconnect', () => {
+    console.log('td disconnected: ' + socket.id + "\n");
+  });
+
+});
 
 //
 //  MARK: Player
@@ -161,29 +198,22 @@ let brain = io.of('/brain');
 brain.on('connection', (socket) => {
   console.log('eyy its da brain!: ' + socket.id);
 
-  // socket.emit('clientInit', { //hmm could just be update...
-  //   game: game,
-  //   state: state,
-  //   players: players
-  // });
+  socket.on('startShower', ()=>{
+    console.log('\n\nstarting shower\n\n');
+    main.emit('startShower');
+    state.startTime = Date.now();
+  })
 
-  // socket.on('removePlayer', (data)=>{
-  //   //sent by boss to remove bug accounts or for laborious edit (redo profile)
-  //   //rn just in console, no UI on boss page
-  //   // let accountIndex = players.indexOf(data.name);
-  //   let accountIndex;
-  //   for (let [i, player] of players.entries()){
-  //     if (player.name == data.name){
-  //       accountIndex = parseInt(i);
-  //       console.log(`removed account index: ${accountIndex}`);
-  //     }
-  //   }
-  //   console.log(`removing player account: ${players[accountIndex].name}`);
-  //   console.log(players[accountIndex]);
+  socket.on('startSignals', ()=>{
+    console.log('\n\nstarting color signals\n\n');
+    // main.emit('startShower');
+    // state.startTime = Date.now();
+    isSendingSignals = true;
+  })
 
-  //   players.splice(accountIndex, 1);
-  //   backup();
-  // });
+  socket.on('overrideSignal', () => {
+    //TODO send signal from brain 
+  });
 
   //listen for this client to disconnect
   socket.on('disconnect', () => {
@@ -199,15 +229,44 @@ setInterval( () => {
   // state.timer = Date.now() - state.lastTime; //still in ms, clients can parse -- issue with interval being 100?
 
   //demo color start
-  if (hasStarted){
+  // if (hasStarted){
+  //   startColorSignal();
+  // }
+
+  if (!isSendingSignals){
+    return;
+  } 
+  state.timer = Date.now();
+  if (state.timer - state.lastTime >= state.signalInterval){
+    //should go slow first 30 seconds
     startColorSignal();
+    state.lastTime = state.timer;
   }
 
-}, 3000); //long for now, just to demo chains
+}, 300); //long for now, just to demo chains
 
 //
 // MARK: FUNCTIONS
 //
+
+function createColorQueue(numSignals){
+  let queueSlots = []; //idk i'm tired
+  for (let i = 0; i < 13; i++){
+    for (let j = 0; j < numSignals; j++){
+      colorQueue.push({});
+      queueSlots.push((i * numSignals) + j);
+    }
+  }
+  for (let i = 0; i < 13; i++){
+    for (let j = 0; j < numSignals; j++){
+      //randomly place a color signal per maxColorSignal into the queue //TODO -- not random? test
+      let randomSpot = Math.floor(Math.random() * queueSlots.length);
+      colorQueue[queueSlots[randomSpot]] = colorHues[i];
+      queueSlots.splice(randomSpot, 1);
+    }
+  }
+  console.log(colorQueue);
+}
 
 function startColorSignal(){
   // sends event to first in chain, on interval, from color queue
@@ -220,6 +279,7 @@ function startColorSignal(){
   let signal = {
     chain: chainIndex,
     index: 0,
+    hueIndex: colorQueue[0].hueIndex,
     color: {
       r: colorQueue[0].r,
       g: colorQueue[0].g,
@@ -228,9 +288,9 @@ function startColorSignal(){
   }
   main.to(startID).emit('colorToClient', signal);
   console.log(`started new signal at chain ${chainIndex} with ${startID}: ${JSON.stringify(signal.color)}`)
-  colorQueue.push(colorQueue.splice(0, 1)[0]); //for now, just cycle the colors;
-  console.log(colorQueue);
-
+  // colorQueue.push(colorQueue.splice(0, 1)[0]); //for now, just cycle the colors, will remove last element on signal send? hmmm could go badly, should just remove here
+  colorQueue.splice(0, 1);
+  // console.log(colorQueue);
 
   chainIndex = (chainIndex + 1) % chains.length;
 }

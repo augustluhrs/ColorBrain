@@ -48,8 +48,20 @@
     - [ ] type OSC input vs on glitch
     - [ ] adjustment of seat map
     - [ ] seat map live view
+- [ ] Misc
+  - [ ] check safari
+  - [ ] check display sleep time
 
 ### Changes
+
+#### 0.0.4 *8/12/24 6*
+
+- connected td to glitch, default namespace with unique events
+
+#### 0.0.3 *8/11/24 2hrs*
+
+- testing onsite with Harry and Mia
+- added mqtt support, sending via last client in chain
 
 #### 0.0.2 *8/9/24 3hrs*
 

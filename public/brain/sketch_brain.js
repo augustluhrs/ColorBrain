@@ -1,7 +1,6 @@
 /*
     ~ * ~ * ~ * 
-    ~ * ~ * ~ * MOBILE 
-    ~ * ~ * ~ * PLAYER
+    ~ * ~ * ~ * BRAIN (CONTROL)
     ~ * ~ * ~ * INTERFACE
     ~ * ~ * ~ * 
 */
@@ -26,39 +25,13 @@ socket.on('clientInit', (data) => {
   // console.log('received init data:');
   // console.log(data);
   // players = data.players;
-  // game = data.game;
   // state = data.state;
-  // originalFactions = game.factions; //sets current server faction info, so can change on own without overwrite
-  // adjustedFactions = structuredClone(game.factions); //fookkin references mate
-  
-  // for (let faction of Object.keys(adjustedFactions)){
-  //   influenceTally[faction] = {
-  //     newOrders: {},
-  //     newShares: 0,
-  //   };
-  //   for (let action of Object.keys(adjustedFactions[faction].orders)){
-  //     influenceTally[faction].newOrders[action] = 0;
-  //   }
-  // }
-
-  // hasReceivedInit = true;
-  //trying to fix UI bug, need both socket info and setup to have finished
-  // hasEitherFinished ? initUI() : hasEitherFinished = true;
 });
 
 socket.on('updates', (data)=>{
   // players = data.players;
   // game = data.game;
   // state = data.state;
-
-  //seems... weird...
-  // timerMin = state.timerMin;
-  // timerSec = state.timerSec;
-
-  // if (hasPlayerProfile) {phase = state.phase}; //login issue if phase changes
-
-  //personal updates: TODO
-
 });
 
 // MARK: GAME STATE VARIABLES
@@ -73,6 +46,9 @@ let font, textSize_L, textSize_M, textSize_S;
 let canvas;
 let wCell, hCell; //hmm. just for grid spacing...
 let headY, bodyY, footY; //y height of sections
+
+let startShowerButt, startSignalsButt;
+let hueButts = []; 
 
 function preload(){
   font = loadFont('../assets/fonts/fugaz.ttf');
@@ -101,6 +77,17 @@ function setup(){
   textSize(width/40);
   strokeWeight(2);
   // colorMode();
+
+  startShowerButt = createButton('START SHOWER').position(width * .15, height * .1).size(width/5, height/10).class('buttons');
+  startShowerButt.mousePressed(()=>{
+    socket.emit('startShower');
+  });
+
+  startSignalsButt = createButton('START COLOR SIGNALS').position(width * .65, height * .1).size(width/5, height/10).class('buttons');
+  startSignalsButt.mousePressed(()=>{
+    socket.emit('startSignals');
+  });
+
 
   //trying to fix UI bug, need both socket info and setup to have finished
   // hasEitherFinished ? initUI() : hasEitherFinished = true;

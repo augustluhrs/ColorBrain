@@ -27,27 +27,27 @@ socket.on('colorToClient', (data)=>{
   hasStarted = true;
 });
 
-socket.on('sendMQTT', (data)=>{
-  sendMsgToAll();
-});
+// socket.on('sendMQTT', (data)=>{
+//   sendMsgToAll();
+// });
 
 // MARK: MQTT
 
 // MQTT client details:
-let broker = {
-    hostname: 'funbrain.cloud.shiftr.io',
-    port: 443 //this needs to be 443 even if shiftr says to use 1883 because we need WSS
-};
-// MQTT client:
-let client;
-// client credentials:
-let creds = {
-    clientID: 'audiencePhone',
-    userName: 'funbrain',
-    password: 'CZApgljANRkzg2GK'
-}
+// let broker = {
+//     hostname: 'funbrain.cloud.shiftr.io',
+//     port: 443 //this needs to be 443 even if shiftr says to use 1883 because we need WSS
+// };
+// // MQTT client:
+// let client;
+// // client credentials:
+// let creds = {
+//     clientID: 'audiencePhone',
+//     userName: 'funbrain',
+//     password: 'CZApgljANRkzg2GK'
+// }
 // topic to subscribe to when you connect:
-let topic = 'color';
+// let topic = 'color';
 // let kitchen = "kitchen";
 
 // MARK: GAME STATE VARIABLES
@@ -122,19 +122,19 @@ function setup(){
   // hasEitherFinished ? initUI() : hasEitherFinished = true;
   
   //MQTT
-  client = new Paho.MQTT.Client(broker.hostname, Number(broker.port), creds.clientID);
-    // set callback handlers for the client:
-    client.onConnectionLost = onConnectionLost;
-    client.onMessageArrived = onMessageArrived;
-    // connect to the MQTT broker:
-    client.connect(
-        {
-            onSuccess: onConnect,       // callback function for when you connect
-            userName: creds.userName,   // username
-            password: creds.password,   // password
-            useSSL: true                // use SSL
-        }
-    );
+  // client = new Paho.MQTT.Client(broker.hostname, Number(broker.port), creds.clientID);
+  //   // set callback handlers for the client:
+  //   client.onConnectionLost = onConnectionLost;
+  //   client.onMessageArrived = onMessageArrived;
+  //   // connect to the MQTT broker:
+  //   client.connect(
+  //       {
+  //           onSuccess: onConnect,       // callback function for when you connect
+  //           userName: creds.userName,   // username
+  //           password: creds.password,   // password
+  //           useSSL: true                // use SSL
+  //       }
+  //   );
 };
 
 //
@@ -200,7 +200,7 @@ function draw(){
 //
 // MARK: Init Functions
 //
-
+/*
 // called when the client connects
 function onConnect() {
     // localDiv.html('client is connected');
@@ -236,7 +236,7 @@ function sendMsgToAll() {
       console.log('sent' + message.payloadString);
     }
 }
-
+*/
 
 //
 // MARK: Misc Functions

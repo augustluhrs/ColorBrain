@@ -67,7 +67,9 @@ let colorQueue = [
   {r: 0,   g: 255, b: 0},
   {r: 0,   g: 0,   b: 255},
   {r: 255, g: 255, b: 255},
-]
+];
+
+
 //
 //  MARK: Player
 //  client (mobile)
@@ -81,6 +83,9 @@ main.on('connection', (socket) => {
   //ah, that's more for like, bug disconnects, not refreshes... but still good to have i guess
   (socket.recovered) ? console.log('recovered client! ' + socket.id):console.log('new player client!: ' + socket.id);
 
+  //TD stuff -- idk why the specific namespace isn't working, something i'm not getting about how to set this up, so doing this a dumb way for now
+  // socket.emit('glitchToTD', "welcome to glitch");
+  
   //seat selection msg from client
   socket.on('assignSeat', (data)=>{
     for (let seat of Object.keys(seats)){
@@ -125,7 +130,8 @@ main.on('connection', (socket) => {
     } else{
       //send to nano
       console.log('\n\nNANO\n\n');
-      main.to(chains[data.chain][data.index].id).emit('sendMQTT', data);
+      // main.to(chains[data.chain][data.index].id).emit('sendMQTT', data);
+      io.emit('glitchToTD', JSON.stringify({chainIndex: data.chain, color: data.color}));
 
     }
   });
@@ -249,6 +255,7 @@ function sortSeatMap(){
     oneChain = oneChain.sort((a,b)=> a.pos.x - b.pos.x);
     console.log(oneChain);
     newChains.push(oneChain);
+    io.emit('initTD', 1);
     return newChains;
   }
 
@@ -271,5 +278,8 @@ function sortSeatMap(){
   newChains[2] = oneChain; //ref err? check TODO
 
   console.log(newChains);
+  
+  io.emit('initTD', 4);
+  
   return newChains;
 }
